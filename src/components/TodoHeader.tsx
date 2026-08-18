@@ -3,6 +3,7 @@ import React from 'react';
 interface Props {
   title: string;
   isAdding: boolean;
+  hasTodos: boolean;
   allCompleted: boolean;
   inputRef: React.RefObject<HTMLInputElement>;
   onTitleChange: (value: string) => void;
@@ -13,6 +14,7 @@ interface Props {
 export const TodoHeader: React.FC<Props> = ({
   title,
   isAdding,
+  hasTodos,
   allCompleted,
   inputRef,
   onTitleChange,
@@ -21,14 +23,14 @@ export const TodoHeader: React.FC<Props> = ({
 }) => {
   return (
     <header className="todoapp__header">
-      <button
-        type="button"
-        className={`todoapp__toggle-all ${
-          allCompleted ? 'active' : ''
-        }`}
-        data-cy="ToggleAllButton"
-        onClick={onToggleAll}
-      />
+      {hasTodos && (
+        <button
+          type="button"
+          className={`todoapp__toggle-all ${allCompleted ? 'active' : ''}`}
+          data-cy="ToggleAllButton"
+          onClick={onToggleAll}
+        />
+      )}
 
       <form onSubmit={onSubmit}>
         <input

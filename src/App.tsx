@@ -1,11 +1,4 @@
-/* eslint-disable jsx-a11y/label-has-associated-control */
-/* eslint-disable jsx-a11y/control-has-associated-label */
-
-import React, {
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import {
   createTodo,
@@ -33,21 +26,19 @@ export const App: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
 
-  const [loadingIds, setLoadingIds] = useState<Set<number>>(
-    new Set(),
-  );
+  const [loadingIds, setLoadingIds] = useState<Set<number>>(new Set());
 
-  const [editingTodoId, setEditingTodoId] = useState<
-    number | null
-  >(null);
+  const [editingTodoId, setEditingTodoId] = useState<number | null>(null);
 
   const [editTitle, setEditTitle] = useState('');
 
   const inputRef = useRef<HTMLInputElement>(null);
+
   const editInputRef = useRef<HTMLInputElement>(null);
 
   const errorTimerRef = useRef<number | null>(null);
-  const isSavingEditRef = useRef(false);
+
+  const editRequestStartedRef = useRef(false);
 
   const hideError = () => {
     if (errorTimerRef.current !== null) {
@@ -73,35 +64,32 @@ export const App: React.FC = () => {
 
   const startLoading = (todoId: number) => {
     setLoadingIds(currentIds => {
-      const newIds = new Set(currentIds);
+      const nextIds = new Set(currentIds);
 
-      newIds.add(todoId);
+      nextIds.add(todoId);
 
-      return newIds;
+      return nextIds;
     });
   };
 
   const stopLoading = (todoId: number) => {
     setLoadingIds(currentIds => {
-      const newIds = new Set(currentIds);
+      const nextIds = new Set(currentIds);
 
-      newIds.delete(todoId);
+      nextIds.delete(todoId);
 
-      return newIds;
+      return nextIds;
     });
   };
 
-  const updateTodoInState = (
-    todoId: number,
-    changes: Partial<Todo>,
-  ) => {
+  const updateTodoInState = (todoId: number, changes: Partial<Todo>) => {
     setTodos(currentTodos =>
       currentTodos.map(todo =>
         todo.id === todoId
           ? {
-              ...todo,
-              ...changes,
-            }
+            ...todo,
+            ...changes,
+          }
           : todo,
       ),
     );
@@ -116,14 +104,19 @@ export const App: React.FC = () => {
         showError('Unable to load todos');
       });
 
+    return () => {
+      if (errorTimerRef.current !== null) {
+        window.clearTimeout(errorTimerRef.current);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (!isAdding) {
+    if (!isAdding && editingTodoId === null) {
       inputRef.current?.focus();
     }
-  }, [isAdding]);
+  }, [isAdding, editingTodoId]);
 
   useEffect(() => {
     if (editingTodoId !== null) {
@@ -131,17 +124,7 @@ export const App: React.FC = () => {
     }
   }, [editingTodoId]);
 
-  useEffect(() => {
-    return () => {
-      if (errorTimerRef.current !== null) {
-        window.clearTimeout(errorTimerRef.current);
-      }
-    };
-  }, []);
-
-  const handleSubmit = (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     hideError();
@@ -150,6 +133,7 @@ export const App: React.FC = () => {
 
     if (!trimmedTitle) {
       showError('Title should not be empty');
+
       inputRef.current?.focus();
 
       return;
@@ -166,10 +150,7 @@ export const App: React.FC = () => {
 
     createTodo(trimmedTitle)
       .then(createdTodo => {
-        setTodos(currentTodos => [
-          ...currentTodos,
-          createdTodo,
-        ]);
+        setTodos(currentTodos => [...currentTodos, createdTodo]);
 
         setTitle('');
       })
@@ -179,6 +160,8 @@ export const App: React.FC = () => {
       .finally(() => {
         setIsAdding(false);
         setTempTodo(null);
+
+        inputRef.current?.focus();
       });
   };
 
@@ -198,6 +181,7 @@ export const App: React.FC = () => {
       })
       .finally(() => {
         stopLoading(todoId);
+
         inputRef.current?.focus();
       });
   };
@@ -221,18 +205,14 @@ export const App: React.FC = () => {
       });
   };
 
-  const allCompleted =
-    todos.length > 0 &&
-    todos.every(todo => todo.completed);
+  const allCompleted = todos.length > 0 && todos.every(todo => todo.completed);
 
   const handleToggleAll = () => {
     hideError();
 
-    const newCompletedStatus = !allCompleted;
+    const newStatus = !allCompleted;
 
-    const todosToUpdate = todos.filter(
-      todo => todo.completed !== newCompletedStatus,
-    );
+    const todosToUpdate = todos.filter(todo => todo.completed !== newStatus);
 
     todosToUpdate.forEach(todo => {
       startLoading(todo.id);
@@ -240,7 +220,7 @@ export const App: React.FC = () => {
 
     const requests = todosToUpdate.map(todo =>
       updateTodo(todo.id, {
-        completed: newCompletedStatus,
+        completed: newStatus,
       }),
     );
 
@@ -254,9 +234,7 @@ export const App: React.FC = () => {
           }
         });
 
-        if (
-          results.some(result => result.status === 'rejected')
-        ) {
+        if (results.some(result => result.status === 'rejected')) {
           showError('Unable to update a todo');
         }
       })
@@ -274,32 +252,29 @@ export const App: React.FC = () => {
 
     setEditingTodoId(todo.id);
     setEditTitle(todo.title);
-    isSavingEditRef.current = false;
+
+    editRequestStartedRef.current = false;
   };
 
   const cancelEditing = () => {
-    isSavingEditRef.current = false;
+    editRequestStartedRef.current = false;
 
     setEditingTodoId(null);
     setEditTitle('');
   };
 
-  const handleEditSubmit = (
-    event?: React.FormEvent<HTMLFormElement>,
-  ) => {
+  const handleEditSubmit = (event?: React.FormEvent<HTMLFormElement>) => {
     event?.preventDefault();
 
     if (editingTodoId === null) {
       return;
     }
 
-    if (isSavingEditRef.current) {
+    if (editRequestStartedRef.current) {
       return;
     }
 
-    const todo = todos.find(
-      currentTodo => currentTodo.id === editingTodoId,
-    );
+    const todo = todos.find(currentTodo => currentTodo.id === editingTodoId);
 
     if (!todo) {
       cancelEditing();
@@ -316,17 +291,31 @@ export const App: React.FC = () => {
     }
 
     if (!trimmedTitle) {
-      isSavingEditRef.current = true;
+      editRequestStartedRef.current = true;
 
-      setEditingTodoId(null);
-      setEditTitle('');
+      startLoading(todo.id);
 
-      handleDelete(todo.id);
+      deleteTodo(todo.id)
+        .then(() => {
+          setTodos(currentTodos =>
+            currentTodos.filter(currentTodo => currentTodo.id !== todo.id),
+          );
+
+          setEditingTodoId(null);
+          setEditTitle('');
+        })
+        .catch(() => {
+          showError('Unable to delete a todo');
+        })
+        .finally(() => {
+          editRequestStartedRef.current = false;
+          stopLoading(todo.id);
+        });
 
       return;
     }
 
-    isSavingEditRef.current = true;
+    editRequestStartedRef.current = true;
 
     startLoading(todo.id);
 
@@ -341,53 +330,43 @@ export const App: React.FC = () => {
       })
       .catch(() => {
         showError('Unable to update a todo');
+
+        // форму НЕ закриваємо
       })
       .finally(() => {
-        isSavingEditRef.current = false;
+        editRequestStartedRef.current = false;
         stopLoading(todo.id);
       });
   };
 
-  const handleEditKeyUp = (
-    event: React.KeyboardEvent<HTMLInputElement>,
-  ) => {
+  const handleEditKeyUp = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Escape') {
       cancelEditing();
     }
   };
 
-  const clearCompleted = () => {
+  const handleClearCompleted = () => {
     hideError();
 
-    const completedTodos = todos.filter(
-      todo => todo.completed,
-    );
+    const completedTodos = todos.filter(todo => todo.completed);
 
     completedTodos.forEach(todo => {
       startLoading(todo.id);
     });
 
-    const requests = completedTodos.map(todo =>
-      deleteTodo(todo.id),
-    );
+    const requests = completedTodos.map(todo => deleteTodo(todo.id));
 
     Promise.allSettled(requests)
       .then(results => {
         const deletedIds = completedTodos
-          .filter((_, index) => {
-            return results[index].status === 'fulfilled';
-          })
+          .filter((_, index) => results[index].status === 'fulfilled')
           .map(todo => todo.id);
 
         setTodos(currentTodos =>
-          currentTodos.filter(
-            todo => !deletedIds.includes(todo.id),
-          ),
+          currentTodos.filter(todo => !deletedIds.includes(todo.id)),
         );
 
-        if (
-          results.some(result => result.status === 'rejected')
-        ) {
+        if (results.some(result => result.status === 'rejected')) {
           showError('Unable to delete a todo');
         }
       })
@@ -395,6 +374,8 @@ export const App: React.FC = () => {
         completedTodos.forEach(todo => {
           stopLoading(todo.id);
         });
+
+        inputRef.current?.focus();
       });
   };
 
@@ -414,13 +395,9 @@ export const App: React.FC = () => {
       visibleTodos = todos;
   }
 
-  const activeTodosCount = todos.filter(
-    todo => !todo.completed,
-  ).length;
+  const activeTodosCount = todos.filter(todo => !todo.completed).length;
 
-  const hasCompletedTodos = todos.some(
-    todo => todo.completed,
-  );
+  const hasCompletedTodos = todos.some(todo => todo.completed);
 
   if (!USER_ID) {
     return <UserWarning />;
@@ -434,6 +411,7 @@ export const App: React.FC = () => {
         <TodoHeader
           title={title}
           isAdding={isAdding}
+          hasTodos={todos.length > 0}
           allCompleted={allCompleted}
           inputRef={inputRef}
           onTitleChange={setTitle}
@@ -464,15 +442,12 @@ export const App: React.FC = () => {
             activeTodosCount={activeTodosCount}
             hasCompletedTodos={hasCompletedTodos}
             onFilterChange={setFilter}
-            onClearCompleted={clearCompleted}
+            onClearCompleted={handleClearCompleted}
           />
         )}
       </div>
 
-      <ErrorNotification
-        errorMessage={errorMessage}
-        onHide={hideError}
-      />
+      <ErrorNotification errorMessage={errorMessage} onHide={hideError} />
     </div>
   );
 };

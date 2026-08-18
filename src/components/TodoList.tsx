@@ -15,12 +15,8 @@ interface Props {
   onDelete: (todoId: number) => void;
   onEditStart: (todo: Todo) => void;
   onEditChange: (value: string) => void;
-  onEditSubmit: (
-    event?: React.FormEvent<HTMLFormElement>,
-  ) => void;
-  onEditKeyUp: (
-    event: React.KeyboardEvent<HTMLInputElement>,
-  ) => void;
+  onEditSubmit: (event?: React.FormEvent<HTMLFormElement>) => void;
+  onEditKeyUp: (event: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export const TodoList: React.FC<Props> = ({
@@ -38,10 +34,7 @@ export const TodoList: React.FC<Props> = ({
   onEditKeyUp,
 }) => {
   return (
-    <section
-      className="todoapp__main"
-      data-cy="TodoList"
-    >
+    <section className="todoapp__main" data-cy="TodoList">
       {todos.map(todo => (
         <TodoItem
           key={todo.id}

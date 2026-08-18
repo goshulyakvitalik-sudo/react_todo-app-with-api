@@ -13,12 +13,8 @@ interface Props {
   onDelete: (todoId: number) => void;
   onEditStart: (todo: Todo) => void;
   onEditChange: (value: string) => void;
-  onEditSubmit: (
-    event?: React.FormEvent<HTMLFormElement>,
-  ) => void;
-  onEditKeyUp: (
-    event: React.KeyboardEvent<HTMLInputElement>,
-  ) => void;
+  onEditSubmit: (event?: React.FormEvent<HTMLFormElement>) => void;
+  onEditKeyUp: (event: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export const TodoItem: React.FC<Props> = ({
@@ -35,35 +31,28 @@ export const TodoItem: React.FC<Props> = ({
   onEditKeyUp,
 }) => {
   return (
-    <div
-      data-cy="Todo"
-      className={`todo ${todo.completed ? 'completed' : ''}`}
-    >
-      <label className="todo__status-label">
+    <div data-cy="Todo" className={`todo ${todo.completed ? 'completed' : ''}`}>
+      <label htmlFor={`todo-status-${todo.id}`} className="todo__status-label">
         <input
+          id={`todo-status-${todo.id}`}
           data-cy="TodoStatus"
           type="checkbox"
           className="todo__status"
           checked={todo.completed}
-          disabled={isLoading || isEditing}
+          disabled={isLoading}
           onChange={() => onToggle(todo)}
         />
       </label>
 
       {isEditing ? (
-        <form
-          onSubmit={onEditSubmit}
-          className="todo__edit"
-        >
+        <form className="todo__edit" onSubmit={onEditSubmit}>
           <input
             ref={editInputRef}
-            data-cy="TodoEditInput"
+            data-cy="TodoTitleField"
             type="text"
             className="todo__title-field"
             value={editTitle}
-            onChange={event =>
-              onEditChange(event.target.value)
-            }
+            onChange={event => onEditChange(event.target.value)}
             onBlur={() => onEditSubmit()}
             onKeyUp={onEditKeyUp}
           />
@@ -92,9 +81,7 @@ export const TodoItem: React.FC<Props> = ({
 
       <div
         data-cy="TodoLoader"
-        className={`modal overlay ${
-          isLoading ? 'is-active' : ''
-        }`}
+        className={`modal overlay ${isLoading ? 'is-active' : ''}`}
       >
         <div className="modal-background has-background-white-ter" />
         <div className="loader" />
